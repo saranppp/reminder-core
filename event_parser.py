@@ -2,13 +2,15 @@ import re
 
 
 def parse_reminder(text: str):
-    text_lower = text.lower().strip()
+    text = text.strip()
 
-    # --------------------------------
-    # Reminder offset
-    # --------------------------------
+    text_lower = text.lower()
 
     reminder_days = 0
+
+    # --------------------------------
+    # Detect reminder offset
+    # --------------------------------
 
     match = re.search(
         r"(\d+)\s+days?\s+before",
@@ -25,33 +27,59 @@ def parse_reminder(text: str):
         reminder_days = 30
 
     # --------------------------------
-    # Event type
+    # Detect event type from text
     # --------------------------------
 
-    if "movie" in text_lower or "film" in text_lower:
-        event_type = "movie_release"
-
-    elif "game" in text_lower:
-        event_type = "game_release"
-
-    elif "concert" in text_lower:
-        event_type = "concert"
-
-    else:
-        event_type = "unknown"
+    event_type = detect_event_type(text_lower)
 
     # --------------------------------
     # Extract entity
     # --------------------------------
 
-    entity = extract_entity(text_lower, event_type)
+    entity = extract_entity(
+        text_lower,
+        event_type
+    )
 
     return {
         "original_text": text,
         "event_type": event_type,
         "entity": entity,
-        "reminder_days": reminder_days,
+        "reminder_days": reminder_days
     }
+
+
+def detect_event_type(text):
+
+    if any(word in text for word in [
+        "movie",
+        "film",
+        "cinema"
+    ]):
+        return "movie_release"
+
+    if any(word in text for word in [
+        "game",
+        "gaming"
+    ]):
+        return "game_release"
+
+    if any(word in text for word in [
+        "concert",
+        "concerts",
+        "event"
+    ]):
+        return "concert"
+
+    if any(word in text for word in [
+        "phone",
+        "iphone",
+        "pixel",
+        "product"
+    ]):
+        return "product_release"
+
+    return "unknown"
 
 
 def extract_entity(text, event_type):
@@ -62,16 +90,20 @@ def extract_entity(text, event_type):
             r"next (.+?) movie",
             r"(.+?) movie",
             r"movie (.+?) released",
-            r"movie (.+?) release",
+            r"movie (.+?) release"
         ]
 
         for pattern in patterns:
-            match = re.search(pattern, text)
+
+            match = re.search(
+                pattern,
+                text
+            )
 
             if match:
+
                 entity = match.group(1).strip()
 
-                # Remove common words
                 entity = re.sub(
                     r"\b(is|the|when|about|to|be|released|release)\b",
                     "",
@@ -79,5 +111,8 @@ def extract_entity(text, event_type):
                 )
 
                 return entity.strip()
+
+    # If we don't know the type yet,
+    # assume the complete input is the entity.
 
     return text
