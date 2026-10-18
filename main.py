@@ -44,11 +44,31 @@ def create_new_reminder():
 
     if parsed["event_type"] == "unknown":
 
-        print(
-            "\nEvent type is not supported yet."
-        )
+        print("\nI need to know what type of event this is.")
 
-        return
+        print("\n1. Movie release")
+        print("2. Game release")
+        print("3. Concert/event")
+        print("4. Product release")
+
+        choice = input("\nSelect event type: ")
+
+        event_types = {
+            "1": "movie_release",
+            "2": "game_release",
+            "3": "concert",
+            "4": "product_release"
+        }
+
+        if choice not in event_types:
+
+            print("Invalid event type.")
+
+            return
+
+        parsed["event_type"] = event_types[choice]
+
+        parsed["entity"] = parsed["original_text"]
 
     reminder_id = create_reminder(
         user_text=user_input,
