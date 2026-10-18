@@ -1,142 +1,55 @@
-import re
-from datetime import datetime
 
 from search import search_web
-
-
-MONTHS = {
-    "january": 1,
-    "february": 2,
-    "march": 3,
-    "april": 4,
-    "may": 5,
-    "june": 6,
-    "july": 7,
-    "august": 8,
-    "september": 9,
-    "october": 10,
-    "november": 11,
-    "december": 12,
-}
+from event_resolver import resolve_event
 
 
 def find_release_date(entity):
 
-    query = (
-        f"{entity} movie release date "
-        f"official upcoming"
-    )
+    queries = [
+        f'"{entity}" next upcoming movie sequel release date',
+        f'"{entity}" next movie release date official',
+        f'"{entity}" upcoming movie release date',
+    ]
 
-    print(f"\nSearching web for:")
-    print(query)
+    all_results = []
+    seen_urls = set()
 
-    results = search_web(query)
+    for query in queries:
 
-    if not results:
-        print("No search results found.")
+        print(f"\nSearching: {query}")
 
+        try:
+            results = search_web(query, max_results=5)
+
+            for result in results:
+                url = result.get("url", "")
+
+                if url and url not in seen_urls:
+                    seen_urls.add(url)
+                    all_results.append(result)
+
+        except Exception as error:
+            print(f"Search failed: {error}")
+
+    if not all_results:
         return {
             "status": "unknown",
             "date": None,
-            "sources": []
+            "confidence": "NONE",
+            "candidates": [],
         }
 
-    print(f"\nFound {len(results)} search results:")
+    print(f"\nUnique search results: {len(all_results)}")
 
-    for index, result in enumerate(results, 1):
+    resolved = resolve_event(all_results)
 
+    for candidate in resolved.get("candidates", []):
         print(
-            f"\n[{index}] {result['title']}"
+            candidate["date"].date(),
+            "|",
+            candidate["title"],
+            "|",
+            candidate["source"],
         )
 
-        print(
-            result["snippet"]
-        )
-
-    # Combine title + snippet
-    text = " ".join(
-        result["title"] + " " + result["snippet"]
-        for result in results
-    )
-
-    release_date = extract_date(text)
-
-    if release_date:
-
-        return {
-            "status": "date_found",
-            "date": release_date,
-            "sources": results
-        }
-
-    return {
-        "status": "unknown",
-        "date": None,
-        "sources": results
-    }
-
-
-def extract_date(text):
-
-    text = text.lower()
-
-    # --------------------------------
-    # Pattern:
-    # May 20, 2027
-    # --------------------------------
-
-    pattern = (
-        r"\b("
-        + "|".join(MONTHS.keys())
-        + r")\s+"
-        r"(\d{1,2}),?\s+"
-        r"(\d{4})"
-    )
-
-    matches = re.findall(pattern, text)
-
-    for month, day, year in matches:
-
-        try:
-
-            date = datetime(
-                int(year),
-                MONTHS[month],
-                int(day)
-            )
-
-            return date
-
-        except ValueError:
-            continue
-
-    # --------------------------------
-    # Pattern:
-    # May 2027
-    # --------------------------------
-
-    pattern = (
-        r"\b("
-        + "|".join(MONTHS.keys())
-        + r")\s+"
-        r"(\d{4})"
-    )
-
-    matches = re.findall(pattern, text)
-
-    for month, year in matches:
-
-        try:
-
-            date = datetime(
-                int(year),
-                MONTHS[month],
-                1
-            )
-
-            return date
-
-        except ValueError:
-            continue
-
-    return None
+    return resolved

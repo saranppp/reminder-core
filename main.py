@@ -104,11 +104,19 @@ def check_reminder(reminder_id):
 
     result = find_release_date(entity)
 
-    if result["date"] is None:
+    if result.get("date") is None:
 
-        print(
-            "\nCould not determine the release date."
-        )
+        print("\nCould not determine the release date.")
+        print("The reminder is saved and can be checked again later.")
+
+        return
+
+    confidence = result.get("confidence", "UNKNOWN")
+
+    if confidence == "LOW":
+
+        print("\nThe release date is uncertain.")
+        print("Not scheduling the reminder until the date is more reliable.")
 
         return
 
